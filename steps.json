@@ -1,0 +1,4 @@
+[
+  { "op": "goto", "url": "https://signup.microsoft.com/get-started/signup?products=146517A0-188F-42c7-962C-C58974AF30DF&mproducts=CFQ7TTC0LH16:0001&fmproducts=CFQ7TTC0LH16:0001&term=P1Y&billingterm=P1Y&culture=en-us&country=us&ali=1" },
+  { "op": "wait", "ms": 9000 }
+]
