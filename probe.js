@@ -1,6 +1,6 @@
 // READ-ONLY diagnostic: dump candidate dropdown options / portal content.
 // Usage: node probe.js "<css selector>"   (default: common dropdown option shapes)
-const { connect, pickPage } = require('./lib');
+const { connect, pickPage, detach } = require('./lib');
 
 const DEFAULT = '[role="option"], [role="listbox"], [role="menuitem"], [class*="allout"], [class*="ropdown"] li, [class*="ropdown"] button';
 
@@ -45,5 +45,5 @@ const DEFAULT = '[role="option"], [role="listbox"], [role="menuitem"], [class*="
   for (const h of hits) {
     console.log(`  <${h.tag}> role=${h.role} id=${h.id || '-'} vis=${h.visible} ${h.box}\n      cls: ${h.cls}\n      txt: ${h.text}`);
   }
-  await browser.close();
+  await detach(browser);
 })().catch(e => { console.error('ERROR: ' + e.message); process.exit(1); });

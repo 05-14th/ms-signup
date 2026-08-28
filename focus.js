@@ -1,6 +1,6 @@
 // Bring the live signup tab to the foreground and focus its first text field,
 // so the user can type the verification code without hunting for the window.
-const { connect, pickPage } = require('./lib');
+const { connect, pickPage, detach } = require('./lib');
 
 (async () => {
   const browser = await connect();
@@ -9,5 +9,5 @@ const { connect, pickPage } = require('./lib');
   await page.locator('input[type="text"], [role="textbox"]').first().focus().catch(() => {});
   console.log('Foregrounded: ' + (await page.title()));
   console.log('URL         : ' + page.url());
-  await browser.close();
+  await detach(browser);
 })().catch(e => { console.error('ERROR: ' + e.message); process.exit(1); });

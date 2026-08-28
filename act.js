@@ -1,5 +1,6 @@
 // Executes a batch of steps from a JSON file, then reports the resulting page.
 // Usage: node act.js steps.json
+// Exits 1 if any step failed, so callers can branch on it.
 //
 // Step shapes:
 //   {"op":"goto",   "url":"https://..."}
@@ -14,12 +15,17 @@
 //   {"op":"waitfor","css":"#id"}
 //   {"op":"scroll", "to":"bottom"}
 const fs = require('fs');
-const { connect, pickPage, listPages, snapshot, report } = require('./lib');
+const { connect, pickPage, listPages, snapshot, report, detach, sleep } = require('./lib');
 
 function locate(page, s) {
   let loc;
   if (s.css) loc = page.locator(s.css);
-  else if (s.role) loc = page.getByRole(s.role, { name: s.name, exact: !!s.exact });
+  else if (s.role) {
+    // Without a name this matches every element of that role and .first() then
+    // silently picks an arbitrary one — a wrong click, not an error. Reject it.
+    if (!s.name) throw new Error(`step has "role":"${s.role}" but no "name" — that matches every ${s.role} on the page`);
+    loc = page.getByRole(s.role, { name: s.name, exact: !!s.exact });
+  }
   else if (s.label) loc = page.getByLabel(s.label, { exact: !!s.exact });
   else if (s.placeholder) loc = page.getByPlaceholder(s.placeholder, { exact: !!s.exact });
   else if (s.text) loc = page.getByText(s.text, { exact: !!s.exact });
@@ -29,11 +35,37 @@ function locate(page, s) {
   return loc;
 }
 
+// Retries across navigation: a locator resolved against the old document throws
+// as soon as the page swaps under it, which is routine mid-checkout. Re-picks the
+// tab each attempt too, since the flow may have moved to a new one.
+async function waitFor(getPage, s, timeout) {
+  const deadline = Date.now() + timeout;
+  for (let attempt = 0; ; attempt++) {
+    const page = getPage();
+    const remaining = deadline - Date.now();
+    try {
+      const loc = s.css
+        ? page.locator(s.css).first()
+        : page.getByText(s.text, { exact: !!s.exact }).first();
+      await loc.waitFor({ state: 'visible', timeout: Math.max(1000, remaining) });
+      return attempt;
+    } catch (e) {
+      if (Date.now() >= deadline) throw e;
+      await sleep(500);
+    }
+  }
+}
+
 (async () => {
-  const steps = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+  const file = process.argv[2];
+  if (!file) throw new Error('usage: node act.js <steps.json>');
+  const steps = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!Array.isArray(steps)) throw new Error(`${file} must contain a JSON array of steps`);
+
   const browser = await connect();
   let page = pickPage(browser);
   const log = [];
+  let failed = false;
   const T = 30000;
 
   for (const [i, s] of steps.entries()) {
@@ -85,10 +117,12 @@ function locate(page, s) {
         case 'wait':
           await page.waitForTimeout(s.ms || 1000);
           break;
-        case 'waitfor':
-          if (s.css) await page.locator(s.css).first().waitFor({ state: 'visible', timeout: s.timeout || T });
-          else await page.getByText(s.text).first().waitFor({ state: 'visible', timeout: s.timeout || T });
+        case 'waitfor': {
+          if (!s.css && !s.text) throw new Error('waitfor needs "css" or "text"');
+          const retries = await waitFor(() => pickPage(browser), s, s.timeout || T);
+          if (retries) log.push(`     (waitfor recovered after ${retries} re-resolve${retries > 1 ? 's' : ''})`);
           break;
+        }
         case 'scroll':
           await page.evaluate(to => window.scrollTo(0, to === 'bottom' ? document.body.scrollHeight : 0), s.to || 'bottom');
           break;
@@ -97,7 +131,12 @@ function locate(page, s) {
       }
       log.push('OK   ' + tag);
     } catch (e) {
-      log.push('FAIL ' + tag + '\n       -> ' + e.message.split('\n')[0]);
+      // Keep several lines: Playwright's first line is just "Timeout 30000ms
+      // exceeded", and the "waiting for locator..." detail below it is the part
+      // that actually says what went wrong.
+      const detail = e.message.split('\n').slice(0, 5).join('\n       ');
+      log.push('FAIL ' + tag + '\n       -> ' + detail);
+      failed = true;
       break; // stop on first failure; never blunder onward through a checkout flow
     }
     await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
@@ -107,5 +146,6 @@ function locate(page, s) {
   const tabs = listPages(browser).map((p, i) => `  [${i}] ${p.url()}`).join('\n');
   const snap = await snapshot(page);
   report(snap, 'STEPS :\n' + log.map(l => '  ' + l).join('\n') + '\nTABS  :\n' + tabs);
-  await browser.close();
+  await detach(browser);
+  process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('ERROR: ' + e.message); process.exit(1); });

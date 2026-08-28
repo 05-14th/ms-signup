@@ -1,9 +1,7 @@
 // Set a Fluent UI dropdown to a given option, idempotently.
 // Usage: node dropdown.js "<option text>" ["<combobox match text>"]
 // Checks aria-expanded instead of blind-toggling, so re-running is safe.
-const { connect, pickPage, snapshot, report } = require('./lib');
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const { connect, pickPage, snapshot, report, readOptions, clickOption, detach, sleep } = require('./lib');
 
 (async () => {
   const want = process.argv[2];
@@ -35,32 +33,23 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       }, comboMatch);
     }
 
-    // Poll for the portal-rendered option list.
-    let opts = [];
-    for (let i = 0; i < 25; i++) {
-      await sleep(200);
-      opts = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('[role="option"]'))
-          .map(e => (e.innerText || '').trim().replace(/\s+/g, ' ')).filter(Boolean));
-      if (opts.length) break;
-    }
+    const opts = await readOptions(page);
     console.log('options seen: ' + JSON.stringify(opts));
     if (!opts.length) throw new Error('option list never appeared');
 
-    const clicked = await page.evaluate((w) => {
-      const el = Array.from(document.querySelectorAll('[role="option"]'))
-        .find(e => (e.innerText || '').trim().replace(/\s+/g, ' ') === w);
-      if (!el) return false;
-      el.click();
-      return true;
-    }, want);
-    if (!clicked) throw new Error(`option "${want}" not among ${JSON.stringify(opts)}`);
+    if (!await clickOption(page, want)) {
+      throw new Error(`option "${want}" not among ${JSON.stringify(opts)}`);
+    }
     await sleep(4000);
   }
 
+  // Choosing a value often advances the form and unmounts the combobox, so a
+  // null here is a normal outcome — reading .text off it used to throw.
   state = await pick();
-  console.log(`combobox after : "${state.text}" expanded=${state.expanded}`);
+  console.log(state
+    ? `combobox after : "${state.text}" expanded=${state.expanded}`
+    : 'combobox after : (no longer on page — the form likely advanced)');
   console.log('');
   report(await snapshot(page, { max: 3500 }));
-  await browser.close();
+  await detach(browser);
 })().catch(e => { console.error('ERROR: ' + e.message); process.exit(1); });

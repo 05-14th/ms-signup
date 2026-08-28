@@ -1,0 +1,60 @@
+[
+  { "op": "goto", "url": "https://www.microsoft.com/en-us/microsoft-365/exchange/exchange-online-business-plans-and-pricing?msockid=0bc6c357978e65500440d5be962f64ac" },
+  { "op": "wait", "ms": 6000 },
+
+  { "op": "click", "role": "link", "name": "Buy now: Exchange Online (Plan 1)", "exact": true },
+  { "op": "wait", "ms": 9000 },
+
+  { "op": "click", "role": "button", "name": "Increase value by one" },
+  { "op": "wait", "ms": 1500 },
+  { "op": "click", "role": "button", "name": "Increase value by one" },
+  { "op": "wait", "ms": 2500 },
+  { "op": "click", "role": "button", "name": "Billing settings - update subscription length and billing frequency" },
+  { "op": "wait", "ms": 4000 },
+
+  { "op": "click", "role": "combobox", "name": "How often do you want to be billed?" },
+  { "op": "wait", "ms": 1500 },
+  { "op": "jsclick", "css": "[role=\"option\"]", "text": "Monthly" },
+  { "op": "wait", "ms": 3000 },
+
+  { "op": "click", "role": "button", "name": "Next" },
+  { "op": "wait", "ms": 8000 },
+
+  { "op": "fill", "role": "textbox", "name": "Email", "value": "dustingrace51@proton.me" },
+  { "op": "wait", "ms": 1500 },
+  { "op": "click", "role": "button", "name": "Next" },
+  { "op": "wait", "ms": 10000 },
+
+  { "op": "click", "role": "button", "name": "Set up account" },
+  { "op": "wait", "ms": 10000 },
+
+  { "op": "waitfor", "text": "Tell us about yourself", "timeout": 600000 },
+
+  { "op": "fill", "role": "textbox", "name": "First name *", "value": "Dustin" },
+  { "op": "fill", "role": "textbox", "name": "Last name *", "value": "Grace" },
+  { "op": "fill", "role": "textbox", "name": "Company name *", "value": "Grace Electric LLC" },
+  { "op": "fill", "role": "textbox", "name": "Business phone number *", "value": "2706958504" },
+  { "op": "fill", "role": "textbox", "name": "Job title *", "value": "Owner" },
+  { "op": "fill", "role": "textbox", "name": "Address line 1 *", "value": "411 320th Ave" },
+  { "op": "fill", "role": "textbox", "name": "City *", "value": "Grinnell" },
+  { "op": "fill", "role": "textbox", "name": "Zip *", "value": "50112" },
+  { "op": "wait", "ms": 2000 },
+
+  { "op": "click", "role": "combobox", "name": "Company size *" },
+  { "op": "wait", "ms": 1500 },
+  { "op": "jsclick", "css": "[role=\"option\"]", "text": "10-24 people" },
+  { "op": "wait", "ms": 2000 },
+
+  { "op": "click", "role": "combobox", "name": "State" },
+  { "op": "wait", "ms": 1500 },
+  { "op": "jsclick", "css": "[role=\"option\"]", "text": "Iowa" },
+  { "op": "wait", "ms": 2000 },
+
+  { "op": "click", "role": "combobox", "name": "Does your company have a website? *" },
+  { "op": "wait", "ms": 1500 },
+  { "op": "jsclick", "css": "[role=\"option\"]", "text": "No" },
+  { "op": "wait", "ms": 2000 },
+
+  { "op": "click", "role": "button", "name": "Next" },
+  { "op": "wait", "ms": 12000 }
+]
